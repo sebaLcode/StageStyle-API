@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin')
-
+const { verifyToken, checkRole } = require('./middlewares/authMiddleware');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // Firebase
 const serviceAccount = require('./config/api-stagestyle-firebase-adminsdk-fbsvc-fbaefe5a98.json')
@@ -16,9 +16,6 @@ const db = admin.firestore();
 
 app.use(express.json());
 app.use(cors());
-
-let nextId = 4;
-
 
 // --- Endpoint de Bienvenida ---
 app.get('/', (req, res) => {
@@ -68,7 +65,8 @@ app.get('/productos/:id', async (req, res) => {
 });
 
 // --- Crear producto ---
-app.post('/productos', async (req, res) => {
+// Solo admin puede
+app.post('/productos', verifyToken, checkRole(['Administrador']), async (req, res) => {
     try {
         const {
             id,
@@ -186,7 +184,8 @@ app.post('/productos', async (req, res) => {
 
 
 // --- Actualizar producto a partir de ID ---
-app.put('/productos/:id', async (req, res) => {
+// Solo admin puede
+app.put('/productos/:id', verifyToken, checkRole(['Administrador']), async (req, res) => {
     const id = req.params.id;
 
     try {
@@ -303,7 +302,8 @@ app.put('/productos/:id', async (req, res) => {
 });
 
 // --- Eliminar producto a partir de ID ---
-app.delete('/productos/:id', async (req, res) => {
+// Solo admin puede
+app.delete('/productos/:id', verifyToken, checkRole(['Administrador']), async (req, res) => {
     const id = req.params.id;
     try {
         const productoRef = db.collection('productos').doc(id);
@@ -321,6 +321,118 @@ app.delete('/productos/:id', async (req, res) => {
 });
 
 // ====== Fin CRUD de Productos ======
+
+// ====== Crear pedido=======
+// --- Endpoint para crear una orden (Boleta) ---
+app.post('/orders', async (req, res) => {
+    try {
+        const { user, items, total, date } = req.body;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ mensaje: "El carrito está vacío" });
+        }
+
+        const nuevaOrden = {
+            user: user || "Invitado",
+            items,
+            total: Number(total),
+            date: date || new Date().toISOString(),
+            status: "Generada",
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        const ref = await db.collection('orders').add(nuevaOrden);
+
+        res.status(201).json({
+            mensaje: "Orden creada exitosamente",
+            id: ref.id,
+            order: nuevaOrden
+        });
+
+    } catch (error) {
+        console.error("Error creando orden:", error);
+        res.status(500).json({ mensaje: "Error al procesar la compra", error: error.message });
+    }
+});
+
+// ====== Fin Crear pedido ======
+
+// ==== Crear Usuario (Solo Admin) ====
+app.post('/users', verifyToken, checkRole(['Administrador']), async (req, res) => {
+    try {
+        const {
+            nombre, email, password, telefono, region, comuna, tipoUsuario
+        } = req.body;
+
+        const userRecord = await admin.auth().createUser({
+            email: email,
+            password: password,
+            displayName: nombre,
+        });
+
+        await db.collection('users').doc(userRecord.uid).set({
+            nombre,
+            email,
+            telefono: telefono || "",
+            region,
+            comuna,
+            role: tipoUsuario, // Aquí se define si es Vendedor, Admin o Cliente
+            createdAt: new Date()
+        });
+
+        res.status(201).json({
+            mensaje: `Usuario ${tipoUsuario} creado exitosamente`,
+            uid: userRecord.uid
+        });
+
+    } catch (error) {
+        console.error("Error creando usuario:", error);
+        res.status(500).json({
+            mensaje: "Error al crear usuario",
+            error: error.message
+        });
+    }
+});
+
+// ==== Obtener todos los usuarios (Solo Admin y Vendedor) ====
+app.get('/users', verifyToken, checkRole(['Administrador', 'Vendedor']), async (req, res) => {
+    try {
+        const snapshot = await db.collection('users').get();
+
+        const usuarios = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            tipoUsuario: doc.data().role
+        }));
+
+        res.json(usuarios);
+
+    } catch (error) {
+        console.error("Error obteniendo usuarios:", error);
+        res.status(500).json({ mensaje: "Error al obtener usuarios", error });
+    }
+});
+
+// index.js
+
+// ==== Obtener todas las órdenes (Admin y Vendedor) ====
+app.get('/orders', verifyToken, checkRole(['Administrador', 'Vendedor']), async (req, res) => {
+    try {
+        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+
+        const orders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+
+        res.json(orders);
+
+    } catch (error) {
+        console.error("Error obteniendo órdenes:", error);
+        res.status(500).json({ mensaje: "Error al obtener órdenes", error });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Servidor corriendo exitosamente en http://localhost:${PORT}`);
