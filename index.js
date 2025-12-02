@@ -4,8 +4,43 @@ const admin = require('firebase-admin')
 const { verifyToken, checkRole } = require('./middlewares/authMiddleware');
 const app = express();
 const PORT = process.env.PORT || 4000;
+//Configuración de Swagger
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
 
-// Firebase
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'StageStyle API',
+            version: '1.0.0',
+            description: 'Documentación de la API de StageStyle',
+            contact: {
+                name: 'Soporte StageStyle',
+            },
+        },
+        servers: [
+            {
+                url: `http://localhost:${PORT}`,
+                description: 'Servidor Local',
+            },
+        ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+        },
+    },
+    apis: ['./index.js'],
+};
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Configuración de Firebase
 const serviceAccount = require('./config/api-stagestyle-firebase-adminsdk-fbsvc-fbaefe5a98.json')
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -17,14 +52,33 @@ const db = admin.firestore();
 app.use(express.json());
 app.use(cors());
 
-// --- Endpoint de Bienvenida ---
+// ======= Rutas de la API =======
+
 app.get('/', (req, res) => {
     res.send('API de StageStyle v1.0');
 });
 
+
 // ======= CRUD de Productos =======
 // --- Obtener todos los productos ---
 // Además se puede utilzar para filtrar por categoría /productos?categoria=Hoodie
+/**
+ * @swagger
+ * /productos:
+ *   get:
+ *     summary: Obtener todos los productos
+ *     tags:
+ *       - Productos
+ *     parameters:
+ *       - in: query
+ *         name: categoria
+ *         schema:
+ *           type: string
+ *         description: Filtrar por categoría
+ *     responses:
+ *       200:
+ *         description: Lista de productos
+ */
 app.get('/productos', async (req, res) => {
     const categoria = req.query.categoria;
 
@@ -50,6 +104,26 @@ app.get('/productos', async (req, res) => {
 });
 
 // --- Obtener producto por id ---
+/**
+ * @swagger
+ * /productos/{id}:
+ *   get:
+ *     summary: Obtener producto por ID
+ *     tags:
+ *       - Productos
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del producto
+ *     responses:
+ *       200:
+ *         description: Producto encontrado
+ *       404:
+ *         description: Producto no encontrado
+ */
 app.get('/productos/:id', async (req, res) => {
     const id = req.params.id;
     try {
@@ -66,6 +140,27 @@ app.get('/productos/:id', async (req, res) => {
 
 // --- Crear producto ---
 // Solo admin puede
+/**
+ * @swagger
+ * /productos:
+ *   post:
+ *     summary: Crear un nuevo producto
+ *     tags:
+ *       - Productos
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Producto creado exitosamente
+ *       400:
+ *         description: Datos inválidos
+ */
 app.post('/productos', verifyToken, checkRole(['Administrador']), async (req, res) => {
     try {
         const {
@@ -185,6 +280,34 @@ app.post('/productos', verifyToken, checkRole(['Administrador']), async (req, re
 
 // --- Actualizar producto a partir de ID ---
 // Solo admin puede
+/**
+ * @swagger
+ * /productos/{id}:
+ *   put:
+ *     summary: Actualizar producto por ID
+ *     tags:
+ *       - Productos
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Producto actualizado correctamente
+ *       404:
+ *         description: Producto no encontrado
+ */
 app.put('/productos/:id', verifyToken, checkRole(['Administrador']), async (req, res) => {
     const id = req.params.id;
 
@@ -303,6 +426,28 @@ app.put('/productos/:id', verifyToken, checkRole(['Administrador']), async (req,
 
 // --- Eliminar producto a partir de ID ---
 // Solo admin puede
+/**
+ * @swagger
+ * /productos/{id}:
+ *   delete:
+ *     summary: Eliminar producto por ID
+ *     tags:
+ *       - Productos
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del producto
+ *     responses:
+ *       204:
+ *         description: Producto eliminado correctamente
+ *       404:
+ *         description: Producto no encontrado
+ */
 app.delete('/productos/:id', verifyToken, checkRole(['Administrador']), async (req, res) => {
     const id = req.params.id;
     try {
@@ -324,6 +469,25 @@ app.delete('/productos/:id', verifyToken, checkRole(['Administrador']), async (r
 
 // ====== Crear pedido=======
 // --- Endpoint para crear una orden (Boleta) ---
+/**
+ * @swagger
+ * /orders:
+ *   post:
+ *     summary: Crear una nueva orden
+ *     tags:
+ *       - Ordenes
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Orden creada exitosamente
+ *       400:
+ *         description: El carrito está vacío
+ */
 app.post('/orders', async (req, res) => {
     try {
         const { user, items, total, date } = req.body;
@@ -357,7 +521,60 @@ app.post('/orders', async (req, res) => {
 
 // ====== Fin Crear pedido ======
 
+// ==== Obtener todas las órdenes (Admin y Vendedor) ====
+/**
+ * @swagger
+ * /orders:
+ *   get:
+ *     summary: Obtener todas las órdenes
+ *     tags:
+ *       - Ordenes
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de órdenes
+ */
+app.get('/orders', verifyToken, checkRole(['Administrador', 'Vendedor']), async (req, res) => {
+    try {
+        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+
+        const orders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+
+        res.json(orders);
+
+    } catch (error) {
+        console.error("Error obteniendo órdenes:", error);
+        res.status(500).json({ mensaje: "Error al obtener órdenes", error });
+    }
+});
+
 // ==== Crear Usuario (Solo Admin) ====
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Crear un nuevo usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       201:
+ *         description: Usuario creado exitosamente
+ *       400:
+ *         description: Datos inválidos
+ */
 app.post('/users', verifyToken, checkRole(['Administrador']), async (req, res) => {
     try {
         const {
@@ -395,6 +612,19 @@ app.post('/users', verifyToken, checkRole(['Administrador']), async (req, res) =
 });
 
 // ==== Obtener todos los usuarios (Solo Admin y Vendedor) ====
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Obtener todos los usuarios
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios
+ */
 app.get('/users', verifyToken, checkRole(['Administrador', 'Vendedor']), async (req, res) => {
     try {
         const snapshot = await db.collection('users').get();
@@ -413,26 +643,8 @@ app.get('/users', verifyToken, checkRole(['Administrador', 'Vendedor']), async (
     }
 });
 
-// index.js
 
-// ==== Obtener todas las órdenes (Admin y Vendedor) ====
-app.get('/orders', verifyToken, checkRole(['Administrador', 'Vendedor']), async (req, res) => {
-    try {
-        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
 
-        const orders = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate()
-        }));
-
-        res.json(orders);
-
-    } catch (error) {
-        console.error("Error obteniendo órdenes:", error);
-        res.status(500).json({ mensaje: "Error al obtener órdenes", error });
-    }
-});
 
 app.listen(PORT, () => {
     console.log(`Servidor corriendo exitosamente en http://localhost:${PORT}`);
