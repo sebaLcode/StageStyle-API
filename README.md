@@ -9,8 +9,8 @@
  4. Nuestra aplicación se abrira en el localhost:4000
 
 ## Endpoints
-* localhost:3000/productos $\rightarrow$ Nos muestra todos los productos.
-* localhost:3000/productos/elIdDelProducto $\rightarrow$ Nos muestra los datos de un producto a partir de su id.
+* localhost:4000/productos $\rightarrow$ Nos muestra todos los productos.
+* localhost:4000/productos/elIdDelProducto $\rightarrow$ Nos muestra los datos de un producto a partir de su id.
 * http://localhost:3000/productos?categoria=Hoodie $\rightarrow$ Nos muestra los productos que pertenecen a la categoría Hoodie, puede ser (Hoodie, Accesorio, Camiseta, Polera, Especial)
 
 Se puede probar los create, update y delete mediante Postman si lo desea.
