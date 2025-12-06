@@ -6,7 +6,7 @@
  2. Dentro de la carpeta base crear un directorio config, dentro de config subir la credencial entregada por Firestore Database.
     <img width="369" height="68" alt="image" src="https://github.com/user-attachments/assets/e3f5fd8f-1e0e-40c8-9fd0-1184f78f5fff" />
  3. En la consola ejecutar npm run dev.
- 4. Nuestra aplicación se abrira en el localhost:3000
+ 4. Nuestra aplicación se abrira en el localhost:4000
 
 ## Endpoints
 * localhost:3000/productos $\rightarrow$ Nos muestra todos los productos.
