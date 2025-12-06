@@ -16,7 +16,7 @@
 Se puede probar los create, update y delete mediante Postman si lo desea.
 
 **Create**
-* localhost:3000/productos
+* localhost:4000/productos
 
 *Formato ejemplo:*
 ```
@@ -33,7 +33,7 @@ Se puede probar los create, update y delete mediante Postman si lo desea.
 }
 ```
 **Update**
-* localhost:3000/productos/elIdDelProducto
+* localhost:4000/productos/elIdDelProducto
 
 *Formato ejemplo (usando el mismo anterior):*
 ```
@@ -51,4 +51,15 @@ Se puede probar los create, update y delete mediante Postman si lo desea.
 ```
 
 **Delete**
-* localhost:3000/productos/elIdDelProducto
+* localhost:4000/productos/elIdDelProducto
+
+##Swagger
+Para acceder a la documentación de Swagger  debe ser mediante:
+* http://localhost:4000/api-docs/
+
+En autorize se debe ingresar el token del Administrador, que puede ser conseguido en:
+
+Clic F12 -> Application -> Storage -> Local Storage -> userToken
+<img width="1564" height="231" alt="image" src="https://github.com/user-attachments/assets/16faccb2-91b1-4ced-ad0f-e5a27945d2b0" />
+
+Una vez ingresado el token, se puede realizar métodos POST, PUT y DELETE.
