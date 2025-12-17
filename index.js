@@ -3,7 +3,7 @@ const cors = require('cors');
 const admin = require('firebase-admin')
 const { verifyToken, checkRole } = require('./middlewares/authMiddleware');
 const app = express();
-const PORT = "http://34.229.184.27:4000";
+const PORT = process.env.PORT || 4000;
 //Configuración de Swagger
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -21,7 +21,7 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: `${PORT}`,
+                url: `http://34.229.184.27:${PORT}`,
                 description: 'Servidor Local',
             },
         ],
@@ -647,5 +647,5 @@ app.get('/users', verifyToken, checkRole(['Administrador', 'Vendedor']), async (
 
 
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo exitosamente en ${PORT}`);
+    console.log(`Servidor corriendo exitosamente en http://34.229.184.27:${PORT}`);
 });
